@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Анализатор игровых идей</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            margin: 0;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #1e293b;
+            padding: 24px;
+            border-radius: 16px;
+        }
+
+        h1 {
+            margin-top: 0;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 140px;
+            border-radius: 12px;
+            border: none;
+            padding: 14px;
+            font-size: 16px;
+            resize: vertical;
+            box-sizing: border-box;
+        }
+
+        button {
+            margin-top: 16px;
+            padding: 12px 18px;
+            border: none;
+            border-radius: 10px;
+            background: #38bdf8;
+            color: #0f172a;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .result {
+            margin-top: 24px;
+            background: #0f172a;
+            padding: 18px;
+            border-radius: 12px;
+            white-space: pre-wrap;
+        }
+
+        .error {
+            color: #f87171;
+            margin-top: 16px;
+        }
+
+        .section-title {
+            margin-top: 18px;
+            color: #7dd3fc;
+        }
+
+        ul {
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Анализатор игровых идей</h1>
+        <p>Введите описание игровой идеи, чтобы получить анализ и рекомендации.</p>
+
+        <textarea id="idea" placeholder="Например: 2D рогалик про выживание в подземелье с элементами строительства базы"></textarea>
+        <button onclick="analyzeIdea()">Проанализировать</button>
+
+        <div id="error" class="error"></div>
+        <div id="result" class="result" style="display:none;"></div>
+    </div>
+
+    <script>
+        function renderList(items) {
+            if (!Array.isArray(items)) return "";
+            return "<ul>" + items.map(item => `<li>${item}</li>`).join("") + "</ul>";
+        }
+
+        async function analyzeIdea() {
+            const idea = document.getElementById("idea").value;
+            const errorEl = document.getElementById("error");
+            const resultEl = document.getElementById("result");
+
+            errorEl.textContent = "";
+            resultEl.style.display = "none";
+            resultEl.innerHTML = "";
+
+            try {
+                const response = await fetch("/analyze", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ idea })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    errorEl.textContent = data.error || "Произошла ошибка";
+                    return;
+                }
+
+                resultEl.innerHTML = `
+                    <div class="section-title">Уточнённая идея</div>
+                    <div>${data.refined_idea || "-"}</div>
+
+                    <div class="section-title">Жанр</div>
+                    <div>${data.genre || "-"}</div>
+
+                    <div class="section-title">Основные механики</div>
+                    ${renderList(data.core_mechanics)}
+
+                    <div class="section-title">Сильные стороны</div>
+                    ${renderList(data.strengths)}
+
+                    <div class="section-title">Слабые стороны</div>
+                    ${renderList(data.weaknesses)}
+
+                    <div class="section-title">Рекомендации</div>
+                    ${renderList(data.recommendations)}
+
+                    <div class="section-title">Оценка идеи</div>
+                    <div>${data.score || "-"}</div>
+                `;
+                resultEl.style.display = "block";
+            } catch (error) {
+                errorEl.textContent = "Ошибка соединения с сервером";
+            }
+        }
+    </script>
+</body>
+</html>
